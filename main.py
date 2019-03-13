@@ -77,8 +77,8 @@ while True:
             bboxHeight = y2 - y1
             bboxWidth = x2 - x1
 
-            p1 = (x1, int(y1+bboxHeight/2))
-            p2 = (x2, int(y2-bboxHeight/2))
+            p1 = (x1, int(y1+bboxHeight/2) + 40)
+            p2 = (x2, int(y2-bboxHeight/2) + 40)
 
             upper_half = frame[y1:p2[1], x1:p2[0]]
             lower_half = frame[p1[1]:y2, p1[0]:x2]
