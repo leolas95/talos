@@ -6,6 +6,8 @@ import cv2
 import imutils
 import numpy as np
 from imutils.video import FPS, VideoStream
+from pyimagesearch.centroidtracker import CentroidTracker
+import scipy
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -37,6 +39,9 @@ vs = VideoStream(src=0).start()
 time.sleep(2.0)
 fps = FPS().start()
 
+ct = CentroidTracker(maxDisappeared=10)
+(H, W) = (None, None)
+
 # loop over the frames from the video stream
 while True:
     # grab the frame from the threaded video stream and resize it
@@ -46,13 +51,14 @@ while True:
 
     # grab the frame dimensions and convert it to a blob
     (h, w) = frame.shape[:2]
-    blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)),
-                                 0.007843, (300, 300), 127.5)
+    blob = cv2.dnn.blobFromImage(cv2.resize(
+        frame, (300, 300)), 0.007843, (300, 300), 127.5)
 
     # pass the blob through the network and obtain the detections and
     # predictions
     net.setInput(blob)
     detections = net.forward()
+    rects = []
 
     # loop over the detections
     for i in np.arange(0, detections.shape[2]):
@@ -87,6 +93,22 @@ while True:
 
             from detect_colors import *
             if is_blue(copy):
+                rects.append([x1, y1, x2, y2])
+            else:
+                continue
+
+            cv2.line(frame, p1, p2, (255, 0, 0), 5)
+            # draw the prediction on the frame
+            label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
+            cv2.rectangle(frame, (x1, y1), (x2, y2),
+                          COLORS[idx], 2)
+            y = y1 - 15 if y1 - 15 > 15 else y1 + 15
+            cv2.putText(frame, label, (x1, y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
+
+            """
+            from detect_colors import *
+            if is_blue(copy):
                 cv2.line(frame, p1, p2, (255, 0, 0), 5)
                 # draw the prediction on the frame
                 label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
@@ -95,6 +117,20 @@ while True:
                 y = y1 - 15 if y1 - 15 > 15 else y1 + 15
                 cv2.putText(frame, label, (x1, y),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
+            """
+    
+    objects = ct.update(rects)
+    # print(objects)
+    print(len(objects), 'personas')
+    # loop over the tracked objects
+    for (objectID, centroid) in objects.items():
+        # draw both the ID of the object and the centroid of the
+        # object on the output frame
+        text = "ID {}".format(objectID)
+        cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
+
     # show the output frame
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF

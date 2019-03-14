@@ -8,7 +8,7 @@ def is_blue(frame):
     # Convert BGR to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     # define range of blue color in HSV
-    lower_blue = np.array([100, 80, 70])
+    lower_blue = np.array([100, 40, 10])
     upper_blue = np.array([140, 255, 255])
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     ret, thresholded = cv2.threshold(gray, 115, 255, cv2.THRESH_BINARY)
