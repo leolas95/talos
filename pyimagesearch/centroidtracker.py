@@ -56,7 +56,7 @@ class CentroidTracker():
         inputCentroids = np.zeros((len(rects), 2), dtype="int")
 
         # loop over the bounding box rectangles
-        for (i, (startX, startY, endX, endY)) in enumerate(rects):
+        for (i, (startX, startY, endX, endY, _)) in enumerate(rects):
             # use the bounding box coordinates to derive the centroid
             cX = int((startX + endX) / 2.0)
             cY = int((startY + endY) / 2.0)

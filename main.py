@@ -39,7 +39,7 @@ vs = VideoStream(src=0).start()
 time.sleep(2.0)
 fps = FPS().start()
 
-ct = CentroidTracker(maxDisappeared=10)
+ct = CentroidTracker()
 (H, W) = (None, None)
 
 # loop over the frames from the video stream
@@ -47,7 +47,7 @@ while True:
     # grab the frame from the threaded video stream and resize it
     # to have a maximum width of 400 pixels
     frame = vs.read()
-    frame = imutils.resize(frame, width=400)
+    frame = imutils.resize(frame, width=600)
 
     # grab the frame dimensions and convert it to a blob
     (h, w) = frame.shape[:2]
@@ -60,7 +60,7 @@ while True:
     detections = net.forward()
     rects = []
 
-    # loop over the detections
+    # loop over the amount of detected objects
     for i in np.arange(0, detections.shape[2]):
         # extract the confidence (i.e., probability) associated with
         # the prediction
@@ -74,7 +74,7 @@ while True:
             # the bounding box for the object
             idx = int(detections[0, 0, i, 1])
 
-            if CLASSES[idx] != 'person':
+            if CLASSES[idx] != 'chair':
                 continue
 
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
@@ -89,22 +89,28 @@ while True:
             upper_half = frame[y1:p2[1], x1:p2[0]]
             lower_half = frame[p1[1]:y2, p1[0]:x2]
 
+            # On met condition, should append rect and data
             copy = np.copy(upper_half)
-
-            from detect_colors import *
-            if is_blue(copy):
-                rects.append([x1, y1, x2, y2])
-            else:
-                continue
-
-            cv2.line(frame, p1, p2, (255, 0, 0), 5)
-            # draw the prediction on the frame
             label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
-            cv2.rectangle(frame, (x1, y1), (x2, y2),
-                          COLORS[idx], 2)
-            y = y1 - 15 if y1 - 15 > 15 else y1 + 15
-            cv2.putText(frame, label, (x1, y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
+            labely = y1 - 15 if y1 - 15 > 15 else y1 + 15
+            rects.append([x1, y1, x2, y2, (p1, p2, label, labely, COLORS[idx])])
+            # from detect_colors import *
+            # if is_green(copy):
+            #     label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
+            #     labely = y1 - 15 if y1 - 15 > 15 else y1 + 15
+            #     rects.append([x1, y1, x2, y2, (p1, p2, label, labely, COLORS[idx])])
+            # else:
+            #     continue
+
+            
+            # cv2.line(frame, p1, p2, (255, 0, 0), 5)
+            # draw the prediction on the frame
+            # label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
+            # cv2.rectangle(frame, (x1, y1), (x2, y2),
+            #               COLORS[idx], 2)
+            # y = y1 - 15 if y1 - 15 > 15 else y1 + 15
+            # cv2.putText(frame, label, (x1, y),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
 
             """
             from detect_colors import *
@@ -120,16 +126,21 @@ while True:
             """
     
     objects = ct.update(rects)
-    # print(objects)
-    print(len(objects), 'personas')
-    # loop over the tracked objects
-    for (objectID, centroid) in objects.items():
-        # draw both the ID of the object and the centroid of the
-        # object on the output frame
-        text = "ID {}".format(objectID)
-        cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
+
+    if len(objects) >= 3:
+        # loop over the tracked objects
+        for (objectID, centroid) in objects.items():
+            # draw both the ID of the object and the centroid of the
+            # object on the output frame
+            # Only draw the bbox and the info for the objects that met the conditions
+            for (x1, y1, x2, y2, (p1, p2, label, labely, color)) in rects:
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame, label, (x1, labely), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                cv2.line(frame, p1, p2, (255, 0, 0), 5)
+                text = "ID {}".format(objectID)
+                cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
 
     # show the output frame
     cv2.imshow("Frame", frame)
