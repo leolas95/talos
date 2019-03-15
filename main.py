@@ -14,12 +14,10 @@ def draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2):
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
     cv2.putText(frame, label, (x1, labely),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-    cv2.line(frame, p1, p2, (255, 0, 0), 5)
-    # text = "ID {}".format(objectID)
-    # cv2.putText(
-    #     frame, text, (centroid[0] - 10, centroid[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    # cv2.circle(
-    #     frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
+    text = "ID {}".format(objectID)
+    cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
+    # cv2.line(frame, p1, p2, (255, 0, 0), 5)
 
 
 # Check wether the object in the frame, delimited by (x1, y1), (x2, y2)
@@ -73,13 +71,11 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 programData = {
     'targets': {
         'chair': {
-            'min': 3
+            'min': 4,
+            'max': 8
         },
         'person': {
-            'min': 1,
-            'properties': {
-                'shirt': 'green',
-            }
+            'min': 1
         }
     }
 }
@@ -156,89 +152,97 @@ while True:
             # On met condition, should append rect and data
             rects.append(
                 [x1, y1, x2, y2, (p1, p2, label, labely, COLORS[idx], class_name)])
-            # from detect_colors import *
-            # if is_green(copy):
-            #     label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
-            #     labely = y1 - 15 if y1 - 15 > 15 else y1 + 15
-            #     rects.append([x1, y1, x2, y2, (p1, p2, label, labely, COLORS[idx])])
-            # else:
-            #     continue
 
-            # cv2.line(frame, p1, p2, (255, 0, 0), 5)
-            # draw the prediction on the frame
-            # label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
-            # cv2.rectangle(frame, (x1, y1), (x2, y2),
-            #               COLORS[idx], 2)
-            # y = y1 - 15 if y1 - 15 > 15 else y1 + 15
-            # cv2.putText(frame, label, (x1, y),
-            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
-
-            """
-            from detect_colors import *
-            if is_blue(copy):
-                cv2.line(frame, p1, p2, (255, 0, 0), 5)
-                # draw the prediction on the frame
-                label = "{}: {:.2f}%".format(CLASSES[idx], confidence * 100)
-                cv2.rectangle(frame, (x1, y1), (x2, y2),
-                              COLORS[idx], 2)
-                y = y1 - 15 if y1 - 15 > 15 else y1 + 15
-                cv2.putText(frame, label, (x1, y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
-            """
-
-    # objects = ct.update(rects)
-    # print(len(objects))
+    # print('rectangulos:', len(rects))
+    objects = ct.update(rects)
 
     # draw both the ID of the object and the centroid of the
     # object on the output frame
     # Only draw the bbox and the info for the objects that met the conditions
 
-    # TODO: Find out a way to display the objects id and centroid
-    for (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) in rects:
+    for (index, (objectID, (centroid, rect))) in enumerate(objects.items()):
+        # print(objectID, centroid, rect)
+        (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) = rect
+        
         minimum = programData['targets'][targetname].get('min')
         maximum = programData['targets'][targetname].get('max')
-        # Amount of detected objects of a class
-        detectedObjects = class_counter[targetname]
+        detectedObjects = class_counter.get(targetname)
         properties = programData['targets'][targetname].get('properties')
 
-        # If there is both minimum and maximum
+        if detectedObjects is None:
+            continue
+
+        class_counter[targetname] -= 1
         if minimum is not None and maximum is not None:
             if detectedObjects >= minimum and detectedObjects <= maximum:
-                # If there are properties to look for in the object, we need to
-                # know if each of them succedeed or not, so we only draw
-                # the bbox if the object meets all the criteria
+                # If the object meets all the specified properties, draw the bbox
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(frame, x1, y1, x2, y2,
-                                           color, label, labely, p1, p2)
-                # No properties to look for, so just draw the bbox
+                        draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                # Otherwise, there wasn't specific properties, so just draw the bbox
                 else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2,
-                                       color, label, labely, p1, p2)
-        # Just minimum
+                    draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
         elif minimum is not None and maximum is None:
             if detectedObjects >= minimum:
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(frame, x1, y1, x2, y2,
-                                           color, label, labely, p1, p2)
+                        draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
                 else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2,
-                                       color, label, labely, p1, p2)
-        # Just maximum
+                    draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
         elif minimum is None and maximum is not None:
             if detectedObjects <= maximum:
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(frame, x1, y1, x2, y2,
-                                           color, label, labely, p1, p2)
+                        draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
                 else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2,
-                                       color, label, labely, p1, p2)
-        # No range specified, so just draw the bbox
-        else:
-            draw_info_on_frame(frame, x1, y1, x2, y2,
-                               color, label, labely, p1, p2)
+                    draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+
+    # TODO: Find out a way to display the objects id and centroid
+    # for (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) in rects:
+    #     minimum = programData['targets'][targetname].get('min')
+    #     maximum = programData['targets'][targetname].get('max')
+    #     # Amount of detected objects of a class
+    #     detectedObjects = class_counter[targetname]
+    #     properties = programData['targets'][targetname].get('properties')
+
+    #     # If there is both minimum and maximum
+    #     if minimum is not None and maximum is not None:
+    #         if detectedObjects >= minimum and detectedObjects <= maximum:
+    #             # If there are properties to look for in the object, we need to
+    #             # know if each of them succedeed or not, so we only draw
+    #             # the bbox if the object meets all the criteria
+    #             if properties is not None:
+    #                 if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
+    #                     draw_info_on_frame(frame, x1, y1, x2, y2,
+    #                                        color, label, labely, p1, p2)
+    #             # No properties to look for, so just draw the bbox
+    #             else:
+    #                 draw_info_on_frame(frame, x1, y1, x2, y2,
+    #                                    color, label, labely, p1, p2)
+    #     # Just minimum
+    #     elif minimum is not None and maximum is None:
+    #         if detectedObjects >= minimum:
+    #             if properties is not None:
+    #                 if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
+    #                     draw_info_on_frame(frame, x1, y1, x2, y2,
+    #                                        color, label, labely, p1, p2)
+    #             else:
+    #                 draw_info_on_frame(frame, x1, y1, x2, y2,
+    #                                    color, label, labely, p1, p2)
+    #     # Just maximum
+    #     elif minimum is None and maximum is not None:
+    #         if detectedObjects <= maximum:
+    #             if properties is not None:
+    #                 if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
+    #                     draw_info_on_frame(frame, x1, y1, x2, y2,
+    #                                        color, label, labely, p1, p2)
+    #             else:
+    #                 draw_info_on_frame(frame, x1, y1, x2, y2,
+    #                                    color, label, labely, p1, p2)
+    #     # No range specified, so just draw the bbox
+    #     else:
+    #         draw_info_on_frame(frame, x1, y1, x2, y2,
+    #                            color, label, labely, p1, p2)
 
     # if minimum is not None and maximum is not None:
     #     if len(objects) >= minimum and len(objects) <= maximum:
