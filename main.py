@@ -71,14 +71,19 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 programData = {
     'targets': {
         'chair': {
-            'min': 4,
-            'max': 8
+            'min': 2,
+            'max': 8,
+            'counter': 'chair-counter'
         },
         'person': {
-            'min': 1
+            'min': 1,
+            'properties': {'shirt': 'green'},
+            'counter': 'person-counter'
         }
     }
 }
+
+counters = {}
 
 targets = programData['targets'].keys()
 
@@ -160,14 +165,16 @@ while True:
     # object on the output frame
     # Only draw the bbox and the info for the objects that met the conditions
 
+    # TODO: Heavily refactor this
     for (index, (objectID, (centroid, rect))) in enumerate(objects.items()):
-        # print(objectID, centroid, rect)
         (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) = rect
         
         minimum = programData['targets'][targetname].get('min')
         maximum = programData['targets'][targetname].get('max')
         detectedObjects = class_counter.get(targetname)
         properties = programData['targets'][targetname].get('properties')
+
+        counter_name = programData['targets'][targetname].get('counter')
 
         if detectedObjects is None:
             continue
@@ -179,23 +186,48 @@ while True:
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
                         draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                        # If there is a counter specified for this class, update its value
+                        if counter_name is not None:
+                            if counters.get(counter_name) is None:
+                                counters[counter_name] = {}
+                            counters[counter_name][objectID] = True
                 # Otherwise, there wasn't specific properties, so just draw the bbox
                 else:
                     draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                    if counter_name is not None:
+                        if counters.get(counter_name) is None:
+                            counters[counter_name] = {}
+                        counters[counter_name][objectID] = True
         elif minimum is not None and maximum is None:
             if detectedObjects >= minimum:
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
                         draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                        if counter_name is not None:
+                            if counters.get(counter_name) is None:
+                                counters[counter_name] = {}
+                            counters[counter_name][objectID] = True
                 else:
                     draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                    if counter_name is not None:
+                        if counters.get(counter_name) is None:
+                            counters[counter_name] = {}
+                        counters[counter_name][objectID] = True
         elif minimum is None and maximum is not None:
             if detectedObjects <= maximum:
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
                         draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                        if counter_name is not None:
+                            if counters.get(counter_name) is None:
+                                counters[counter_name] = {}
+                            counters[counter_name][objectID] = True
                 else:
                     draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                    if counter_name is not None:
+                        if counters.get(counter_name) is None:
+                            counters[counter_name] = {}
+                        counters[counter_name][objectID] = True
 
     # TODO: Find out a way to display the objects id and centroid
     # for (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) in rects:
@@ -281,3 +313,4 @@ print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 # do a bit of cleanup
 cv2.destroyAllWindows()
 vs.stop()
+print(counters)
