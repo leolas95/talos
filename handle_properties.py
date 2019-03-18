@@ -2,8 +2,16 @@ import cv2
 import numpy as np
 
 
-def draw_info_on_frame(frame, bbox, color, label, labely, p1, p2, object_id, centroid):
-    (x1, y1, x2, y2) = bbox
+def draw_info_on_frame(frame, object_data):
+    (x1, y1, x2, y2) = object_data['bounding_box']
+    print('draw_info_on_frame:\t  ', x1, y1, x2, y2, '\n')
+    color = object_data['color']
+    label = object_data['label']
+    labely = object_data['labely']
+    # (p1, p2) = object_data['middle_line_coords']
+    object_id = object_data['object_id']
+    centroid = object_data['centroid']
+
     # Draw the bounding box, target name and confidence
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
     cv2.putText(frame, label, (x1, labely),
@@ -19,8 +27,10 @@ def draw_info_on_frame(frame, bbox, color, label, labely, p1, p2, object_id, cen
 
 # Checks wether the object in the frame, delimited by (x1, y1), (x2, y2)
 # meets all the properties. Returns True if so, False otherwise
-def object_meets_criteria(frame, properties, bbox, p1, p2):
+def object_meets_criteria(frame, properties, bbox, middle_line_coords):
     (x1, y1, x2, y2) = bbox
+    print('object_meets_criteria:', x1, y1, x2, y2)
+    (p1, p2) = middle_line_coords
     properties_fulfilled = []
     from detect_colors import is_red, is_green, is_blue
 
@@ -49,23 +59,27 @@ def object_meets_criteria(frame, properties, bbox, p1, p2):
 
 
 def handle_counter(counters, counter_name, object_id):
-    if counters.get(counter_name) is None:
-        counters[counter_name] = {}
-    counters[counter_name][object_id] = True
+    # Checks if the counter_name key already exists, and if not, initialize it
+    exists = counters.get(counter_name, False)
+    counters[counter_name] = set() if not exists else counters[counter_name]
+    counters[counter_name].add(object_id)
 
 
-def handle_properties(frame, properties, bbox, p1, p2, color, label, labely, object_id, centroid, counter_name, counters):
+def handle_properties(frame, properties, counters, object_data):
+    object_id = object_data['object_id']
+    counter_name = object_data['counter_name']
+
     # If the object meets all the specified properties, draw the bbox
     if properties is not None:
-        if object_meets_criteria(frame, properties, bbox, p1, p2):
-            draw_info_on_frame(frame, bbox, color, label,
-                               labely, p1, p2, object_id, centroid)
+        if object_meets_criteria(frame, properties, object_data['bounding_box'],
+                                 object_data['middle_line_coords']):
+            draw_info_on_frame(frame, object_data)
+
             # If there is a counter specified for this class, update its value
             if counter_name is not None:
                 handle_counter(counters, counter_name, object_id)
     # Otherwise, there wasn't specific properties, so just draw the bbox
     else:
-        draw_info_on_frame(frame, bbox, color, label,
-                           labely, p1, p2, object_id, centroid)
+        draw_info_on_frame(frame, object_data)
         if counter_name is not None:
             handle_counter(counters, counter_name, object_id)

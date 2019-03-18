@@ -8,7 +8,7 @@ from imutils.video import FPS, VideoStream
 import cv2
 import numpy as np
 
-from handlers import handle_properties
+from handle_properties import handle_properties
 from pyimagesearch.centroidtracker import CentroidTracker
 
 # construct the argument parse and parse the arguments
@@ -25,28 +25,33 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "sofa", "train", "tvmonitor"]
 COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
-program_data = {
-    'targets': {
-        'chair': {
-            'min': 1,
-            'max': 3,
-            'counter': 'chair-counter'
-        },
-        'person': {
-            'counter': 'person-counter'
-        }
-    }
-}
-
-counters = {}
-
-targets = program_data['targets'].keys()
 
 def main():
+    program_data = {
+        'targets': {
+            'chair': {
+                'min': 1,
+                'max': 3,
+                'counter': 'chair-counter'
+            },
+            'person': {
+                'counter': 'person-counter',
+                'properties': {'shirt': 'red'}
+            }
+        }
+    }
+
+    # Dictionary of counter names specified by the user in the DSL program.
+    # Each key is the name of the counter, and the value is a set, whose elements
+    # are the IDs of the objects detected
+    counters = {}
+
+    targets = program_data['targets'].keys()
+
     # load our serialized model from disk
     print("[INFO] loading model...")
-    net = cv2.dnn.readNetFromCaffe('./MobileNetSSD_deploy.prototxt.txt',
-                                './MobileNetSSD_deploy.caffemodel')
+    net = cv2.dnn.readNetFromCaffe(
+        './MobileNetSSD_deploy.prototxt.txt', './MobileNetSSD_deploy.caffemodel')
 
     # initialize the video stream, allow the cammera sensor to warmup,
     # and initialize the FPS counter
@@ -97,8 +102,9 @@ def main():
                     continue
 
                 # Increment the amount of objects seen for this class
-                class_counter[class_name] = class_counter.get(class_name, 0) + 1
-                
+                class_counter[class_name] = class_counter.get(
+                    class_name, 0) + 1
+
                 # Get the bounding box coordinates
                 box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
                 (x1, y1, x2, y2) = box.astype("int")
@@ -113,43 +119,56 @@ def main():
                 rects.append(
                     [x1, y1, x2, y2, (p1, p2, label, labely, COLORS[idx], class_name)])
 
-        # print('rectangulos:', len(rects))
         objects = ct.update(rects)
 
-        # draw both the ID of the object and the centroid of the
-        # object on the output frame
-        # Only draw the bbox and the info for the objects that met the conditions
+        # For each detected object, draw its bounding box, info, centroid and ID
+        # if it meets the specified conditions (if any)
+        for (object_id, (centroid, rect)) in objects.items():
+            (x1, y1, x2, y2, (p1, p2, label, labely, color, target_name)) = rect
 
-        for (index, (object_id, (centroid, rect))) in enumerate(objects.items()):
-            (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) = rect
+            minimum = program_data['targets'][target_name].get('min')
+            maximum = program_data['targets'][target_name].get('max')
+            detected_objects = class_counter.get(target_name)
+            properties = program_data['targets'][target_name].get('properties')
 
-            minimum = program_data['targets'][targetname].get('min')
-            maximum = program_data['targets'][targetname].get('max')
-            detected_objects = class_counter.get(targetname)
-            properties = program_data['targets'][targetname].get('properties')
-
-            counter_name = program_data['targets'][targetname].get('counter')
+            # Name of the counter specified by the user in the DSL program
+            counter_name = program_data['targets'][target_name].get('counter')
 
             if detected_objects is None:
                 continue
 
-            class_counter[targetname] -= 1
+            class_counter[target_name] -= 1
+
+            object_data = {
+                'bounding_box': (x1, y1, x2, y2),
+                'middle_line_coords': (p1, p2),
+                'color': color,
+                'label': label,
+                'labely': labely,
+                'object_id': object_id,
+                'centroid': centroid,
+                'counter_name': counter_name,
+            }
+
+            # Specified both minimum and maximum amount of objects
             if minimum is not None and maximum is not None:
                 if minimum <= detected_objects <= maximum:
-                    handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
-                                    color, label, labely, object_id, centroid, counter_name, counters)
+                    handle_properties(frame, properties, counters, object_data)
+
+            # Just minimum
             elif minimum is not None and maximum is None:
                 if detected_objects >= minimum:
-                    handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
-                                    color, label, labely, object_id, centroid, counter_name, counters)
+                    handle_properties(frame, properties, counters, object_data)
+
+            # Just maximum
             elif minimum is None and maximum is not None:
                 if detected_objects <= maximum:
-                    handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
-                                    color, label, labely, object_id, centroid, counter_name, counters)
+                    handle_properties(frame, properties, counters, object_data)
+
+            # Neither minimum nor maximum
             else:
-                # Check properties onwards
-                handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
-                                color, label, labely, object_id, centroid, counter_name, counters)
+                # So just check properties onwards
+                handle_properties(frame, properties, counters, object_data)
 
         # show the output frame
         cv2.imshow("Frame", frame)
@@ -171,6 +190,7 @@ def main():
     cv2.destroyAllWindows()
     vs.stop()
     print(counters)
+
 
 if __name__ == '__main__':
     main()
