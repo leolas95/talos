@@ -1,55 +1,15 @@
 # import the necessary packages
 import argparse
 import time
-import sys
-import cv2
+
 import imutils
-import numpy as np
 from imutils.video import FPS, VideoStream
+
+import cv2
+import numpy as np
+
+from handlers import handle_properties
 from pyimagesearch.centroidtracker import CentroidTracker
-import scipy
-
-
-def draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2):
-    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-    cv2.putText(frame, label, (x1, labely),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-    text = "ID {}".format(objectID)
-    cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
-    # cv2.line(frame, p1, p2, (255, 0, 0), 5)
-
-
-# Check wether the object in the frame, delimited by (x1, y1), (x2, y2)
-# meets all the properties. Returns True if so, False otherwise
-def object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-    properties_fulfilled = []
-    from detect_colors import is_red, is_green, is_blue
-
-    for propname, propvalue in properties.items():
-        if propname == 'shirt':
-            upper_half = frame[y1:p2[1], x1:p2[0]]
-            copy = np.copy(upper_half)
-        elif propname == 'trousers':
-            lower_half = frame[p1[1]:y2, p1[0]:x2]
-            copy = np.copy(lower_half)
-        else:
-            print('ERROR: Property', propname, 'unknown')
-            continue
-
-        if propvalue == 'red':
-            properties_fulfilled.append(is_red(copy))
-        elif propvalue == 'blue':
-            properties_fulfilled.append(is_blue(copy))
-        elif propvalue == 'green':
-            properties_fulfilled.append(is_green(copy))
-        else:
-            print('ERROR: Property value', propvalue, 'unknown')
-            continue
-
-    return False not in properties_fulfilled
-
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -65,7 +25,7 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "sofa", "train", "tvmonitor"]
 COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
-programData = {
+program_data = {
     'targets': {
         'chair': {
             'min': 1,
@@ -73,8 +33,6 @@ programData = {
             'counter': 'chair-counter'
         },
         'person': {
-            'min': 1,
-            'properties': {'shirt': 'green'},
             'counter': 'person-counter'
         }
     }
@@ -82,7 +40,7 @@ programData = {
 
 counters = {}
 
-targets = programData['targets'].keys()
+targets = program_data['targets'].keys()
 
 # load our serialized model from disk
 print("[INFO] loading model...")
@@ -151,7 +109,6 @@ while True:
 
             label = "{}: {:.2f}%".format(class_name, confidence * 100)
             labely = y1 - 15 if y1 - 15 > 15 else y1 + 15
-            # On met condition, should append rect and data
             rects.append(
                 [x1, y1, x2, y2, (p1, p2, label, labely, COLORS[idx], class_name)])
 
@@ -162,140 +119,36 @@ while True:
     # object on the output frame
     # Only draw the bbox and the info for the objects that met the conditions
 
-    # TODO: Heavily refactor this
     for (index, (objectID, (centroid, rect))) in enumerate(objects.items()):
         (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) = rect
 
-        minimum = programData['targets'][targetname].get('min')
-        maximum = programData['targets'][targetname].get('max')
+        minimum = program_data['targets'][targetname].get('min')
+        maximum = program_data['targets'][targetname].get('max')
         detectedObjects = class_counter.get(targetname)
-        properties = programData['targets'][targetname].get('properties')
+        properties = program_data['targets'][targetname].get('properties')
 
-        counter_name = programData['targets'][targetname].get('counter')
+        counter_name = program_data['targets'][targetname].get('counter')
 
         if detectedObjects is None:
             continue
 
         class_counter[targetname] -= 1
         if minimum is not None and maximum is not None:
-            if detectedObjects >= minimum and detectedObjects <= maximum:
-                # If the object meets all the specified properties, draw the bbox
-                if properties is not None:
-                    if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(
-                            frame, x1, y1, x2, y2, color, label, labely, p1, p2)
-                        # If there is a counter specified for this class, update its value
-                        if counter_name is not None:
-                            if counters.get(counter_name) is None:
-                                counters[counter_name] = {}
-                            counters[counter_name][objectID] = True
-                # Otherwise, there wasn't specific properties, so just draw the bbox
-                else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2,
-                                       color, label, labely, p1, p2)
-                    if counter_name is not None:
-                        if counters.get(counter_name) is None:
-                            counters[counter_name] = {}
-                        counters[counter_name][objectID] = True
+            if minimum <= detectedObjects <= maximum:
+                handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
+                                  color, label, labely, objectID, centroid, counter_name, counters)
         elif minimum is not None and maximum is None:
             if detectedObjects >= minimum:
-                if properties is not None:
-                    if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(
-                            frame, x1, y1, x2, y2, color, label, labely, p1, p2)
-                        if counter_name is not None:
-                            if counters.get(counter_name) is None:
-                                counters[counter_name] = {}
-                            counters[counter_name][objectID] = True
-                else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2,
-                                       color, label, labely, p1, p2)
-                    if counter_name is not None:
-                        if counters.get(counter_name) is None:
-                            counters[counter_name] = {}
-                        counters[counter_name][objectID] = True
+                handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
+                                  color, label, labely, objectID, centroid, counter_name, counters)
         elif minimum is None and maximum is not None:
             if detectedObjects <= maximum:
-                if properties is not None:
-                    if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(
-                            frame, x1, y1, x2, y2, color, label, labely, p1, p2)
-                        if counter_name is not None:
-                            if counters.get(counter_name) is None:
-                                counters[counter_name] = {}
-                            counters[counter_name][objectID] = True
-                else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2,
-                                       color, label, labely, p1, p2)
-                    if counter_name is not None:
-                        if counters.get(counter_name) is None:
-                            counters[counter_name] = {}
-                        counters[counter_name][objectID] = True
-
-    # TODO: Find out a way to display the objects id and centroid
-    # for (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) in rects:
-    #     minimum = programData['targets'][targetname].get('min')
-    #     maximum = programData['targets'][targetname].get('max')
-    #     # Amount of detected objects of a class
-    #     detectedObjects = class_counter[targetname]
-    #     properties = programData['targets'][targetname].get('properties')
-
-    #     # If there is both minimum and maximum
-    #     if minimum is not None and maximum is not None:
-    #         if detectedObjects >= minimum and detectedObjects <= maximum:
-    #             # If there are properties to look for in the object, we need to
-    #             # know if each of them succedeed or not, so we only draw
-    #             # the bbox if the object meets all the criteria
-    #             if properties is not None:
-    #                 if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-    #                     draw_info_on_frame(frame, x1, y1, x2, y2,
-    #                                        color, label, labely, p1, p2)
-    #             # No properties to look for, so just draw the bbox
-    #             else:
-    #                 draw_info_on_frame(frame, x1, y1, x2, y2,
-    #                                    color, label, labely, p1, p2)
-    #     # Just minimum
-    #     elif minimum is not None and maximum is None:
-    #         if detectedObjects >= minimum:
-    #             if properties is not None:
-    #                 if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-    #                     draw_info_on_frame(frame, x1, y1, x2, y2,
-    #                                        color, label, labely, p1, p2)
-    #             else:
-    #                 draw_info_on_frame(frame, x1, y1, x2, y2,
-    #                                    color, label, labely, p1, p2)
-    #     # Just maximum
-    #     elif minimum is None and maximum is not None:
-    #         if detectedObjects <= maximum:
-    #             if properties is not None:
-    #                 if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-    #                     draw_info_on_frame(frame, x1, y1, x2, y2,
-    #                                        color, label, labely, p1, p2)
-    #             else:
-    #                 draw_info_on_frame(frame, x1, y1, x2, y2,
-    #                                    color, label, labely, p1, p2)
-    #     # No range specified, so just draw the bbox
-    #     else:
-    #         draw_info_on_frame(frame, x1, y1, x2, y2,
-    #                            color, label, labely, p1, p2)
-
-    # if minimum is not None and maximum is not None:
-    #     if len(objects) >= minimum and len(objects) <= maximum:
-    #         # loop over the tracked objects
-    #         for (objectID, centroid) in objects.items():
-    #             # draw both the ID of the object and the centroid of the
-    #             # object on the output frame
-    #             # Only draw the bbox and the info for the objects that met the conditions
-    #             for (x1, y1, x2, y2, (p1, p2, label, labely, color)) in rects:
-    #                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-    #                 cv2.putText(frame, label, (x1, labely),
-    #                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-    #                 cv2.line(frame, p1, p2, (255, 0, 0), 5)
-    #                 text = "ID {}".format(objectID)
-    #                 cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
-    #                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    #                 cv2.circle(
-    #                     frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
+                handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
+                                  color, label, labely, objectID, centroid, counter_name, counters)
+        else:
+            # Check properties onwards
+            handle_properties(frame, properties, (x1, y1, x2, y2), p1, p2,
+                              color, label, labely, objectID, centroid, counter_name, counters)
 
     # show the output frame
     cv2.imshow("Frame", frame)
@@ -316,3 +169,4 @@ print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 # do a bit of cleanup
 cv2.destroyAllWindows()
 vs.stop()
+print(counters)
