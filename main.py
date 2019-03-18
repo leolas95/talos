@@ -15,7 +15,8 @@ def draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2):
     cv2.putText(frame, label, (x1, labely),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     text = "ID {}".format(objectID)
-    cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
     # cv2.line(frame, p1, p2, (255, 0, 0), 5)
 
@@ -52,10 +53,6 @@ def object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-p", "--prototxt", required=False,
-                help="path to Caffe 'deploy' prototxt file")
-ap.add_argument("-m", "--model", required=False,
-                help="path to Caffe pre-trained model")
 ap.add_argument("-c", "--confidence", type=float, default=0.2,
                 help="minimum probability to filter weak detections")
 args = vars(ap.parse_args())
@@ -71,8 +68,8 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 programData = {
     'targets': {
         'chair': {
-            'min': 2,
-            'max': 8,
+            'min': 1,
+            'max': 3,
             'counter': 'chair-counter'
         },
         'person': {
@@ -168,7 +165,7 @@ while True:
     # TODO: Heavily refactor this
     for (index, (objectID, (centroid, rect))) in enumerate(objects.items()):
         (x1, y1, x2, y2, (p1, p2, label, labely, color, targetname)) = rect
-        
+
         minimum = programData['targets'][targetname].get('min')
         maximum = programData['targets'][targetname].get('max')
         detectedObjects = class_counter.get(targetname)
@@ -185,7 +182,8 @@ while True:
                 # If the object meets all the specified properties, draw the bbox
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                        draw_info_on_frame(
+                            frame, x1, y1, x2, y2, color, label, labely, p1, p2)
                         # If there is a counter specified for this class, update its value
                         if counter_name is not None:
                             if counters.get(counter_name) is None:
@@ -193,7 +191,8 @@ while True:
                             counters[counter_name][objectID] = True
                 # Otherwise, there wasn't specific properties, so just draw the bbox
                 else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                    draw_info_on_frame(frame, x1, y1, x2, y2,
+                                       color, label, labely, p1, p2)
                     if counter_name is not None:
                         if counters.get(counter_name) is None:
                             counters[counter_name] = {}
@@ -202,13 +201,15 @@ while True:
             if detectedObjects >= minimum:
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                        draw_info_on_frame(
+                            frame, x1, y1, x2, y2, color, label, labely, p1, p2)
                         if counter_name is not None:
                             if counters.get(counter_name) is None:
                                 counters[counter_name] = {}
                             counters[counter_name][objectID] = True
                 else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                    draw_info_on_frame(frame, x1, y1, x2, y2,
+                                       color, label, labely, p1, p2)
                     if counter_name is not None:
                         if counters.get(counter_name) is None:
                             counters[counter_name] = {}
@@ -217,13 +218,15 @@ while True:
             if detectedObjects <= maximum:
                 if properties is not None:
                     if object_meets_criteria(frame, properties, x1, y1, x2, y2, p1, p2):
-                        draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                        draw_info_on_frame(
+                            frame, x1, y1, x2, y2, color, label, labely, p1, p2)
                         if counter_name is not None:
                             if counters.get(counter_name) is None:
                                 counters[counter_name] = {}
                             counters[counter_name][objectID] = True
                 else:
-                    draw_info_on_frame(frame, x1, y1, x2, y2, color, label, labely, p1, p2)
+                    draw_info_on_frame(frame, x1, y1, x2, y2,
+                                       color, label, labely, p1, p2)
                     if counter_name is not None:
                         if counters.get(counter_name) is None:
                             counters[counter_name] = {}
@@ -313,4 +316,3 @@ print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 # do a bit of cleanup
 cv2.destroyAllWindows()
 vs.stop()
-print(counters)
