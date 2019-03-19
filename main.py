@@ -47,13 +47,12 @@ def main():
     program_data = {
         'targets': {
             'chair': {
-                'min': 1,
-                'max': 3,
+                'min': 5,
+                'max': 9,
                 'counter': 'chair_counter'
             },
             'person': {
-                'counter': 'person_counter',
-                'properties': {'shirt': 'green'}
+                'counter': 'person_counter'
             }
         },
         'conditions': [
@@ -65,6 +64,15 @@ def main():
                 },
                 'action': 'alert',
                 'action_args': ['1', '2']
+            },
+            {
+                'condition': {
+                    'left_operand': 'person_counter',
+                    'operator': '>=',
+                    'right_operand': '1'
+                },
+                'action': 'alert',
+                'action_args': ['Se ha detectado a una persona!']
             }
         ]
     }
@@ -180,6 +188,9 @@ def main():
                 'counter_name': counter_name,
             }
 
+            # List to keep the conditions that weren't true
+            remaining_conditions = []
+
             # Check if some condition holds true
             for condition in conditions:
                 # Get value of left operand
@@ -196,6 +207,7 @@ def main():
                     left_operand: left_operand_value,
                     right_operand: right_operand_value
                 }
+
                 expression = left_operand + operator + right_operand
                 expression_value = eval(expression, context)
 
@@ -204,6 +216,12 @@ def main():
                     action = condition['action']
                     action_args = condition['action_args']
                     actions.do(action, *action_args)
+                else:
+                    # If the current condition is False, we keep it
+                    remaining_conditions.append(condition)
+
+            # Update the list to the conditions that haven't been met
+            conditions = remaining_conditions
 
             # Specified both minimum and maximum amount of objects
             if minimum is not None and maximum is not None:
