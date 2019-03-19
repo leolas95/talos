@@ -7,6 +7,7 @@ from imutils.video import FPS, VideoStream
 
 import cv2
 import numpy as np
+import actions.actions as actions
 
 from handle_properties import handle_properties
 from pyimagesearch.centroidtracker import CentroidTracker
@@ -25,6 +26,22 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "sofa", "train", "tvmonitor"]
 COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
+# Gets the value of the operand, searching in the dict counters.
+# The operand must be either an identifier (counter) or an integer
+
+
+def get_value(operand, counters):
+    # If the operand is an identifier, gets its current value, or default to
+    # zero if not present yet
+    if operand.isidentifier():
+        # Returns the current value of the counter, or 0 if doesn' exist yet
+        result = counters.get(operand)
+        return 0 if result is None else len(result)
+
+    # Else, we assume that it's just an integer
+    else:
+        return int(operand)
+
 
 def main():
     program_data = {
@@ -32,21 +49,34 @@ def main():
             'chair': {
                 'min': 1,
                 'max': 3,
-                'counter': 'chair-counter'
+                'counter': 'chair_counter'
             },
             'person': {
-                'counter': 'person-counter',
-                'properties': {'shirt': 'red'}
+                'counter': 'person_counter',
+                'properties': {'shirt': 'green'}
             }
-        }
+        },
+        'conditions': [
+            {
+                'condition': {
+                    'left_operand': 'chair_counter',
+                    'operator': '>',
+                    'right_operand': '2'
+                },
+                'action': 'alert',
+                'action_args': ['1', '2']
+            }
+        ]
     }
+
+    targets = program_data['targets'].keys()
 
     # Dictionary of counter names specified by the user in the DSL program.
     # Each key is the name of the counter, and the value is a set, whose elements
     # are the IDs of the objects detected
     counters = {}
 
-    targets = program_data['targets'].keys()
+    conditions = program_data['conditions']
 
     # load our serialized model from disk
     print("[INFO] loading model...")
@@ -149,6 +179,31 @@ def main():
                 'centroid': centroid,
                 'counter_name': counter_name,
             }
+
+            # Check if some condition holds true
+            for condition in conditions:
+                # Get value of left operand
+                left_operand = condition['condition']['left_operand']
+                left_operand_value = get_value(left_operand, counters)
+
+                operator = condition['condition']['operator']
+
+                # Get value of right operand
+                right_operand = condition['condition']['right_operand']
+                right_operand_value = get_value(right_operand, counters)
+
+                context = {
+                    left_operand: left_operand_value,
+                    right_operand: right_operand_value
+                }
+                expression = left_operand + operator + right_operand
+                expression_value = eval(expression, context)
+
+                if expression_value is True:
+                    # Execute action
+                    action = condition['action']
+                    action_args = condition['action_args']
+                    actions.do(action, *action_args)
 
             # Specified both minimum and maximum amount of objects
             if minimum is not None and maximum is not None:

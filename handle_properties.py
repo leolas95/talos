@@ -4,7 +4,6 @@ import numpy as np
 
 def draw_info_on_frame(frame, object_data):
     (x1, y1, x2, y2) = object_data['bounding_box']
-    print('draw_info_on_frame:\t  ', x1, y1, x2, y2, '\n')
     color = object_data['color']
     label = object_data['label']
     labely = object_data['labely']
@@ -29,7 +28,6 @@ def draw_info_on_frame(frame, object_data):
 # meets all the properties. Returns True if so, False otherwise
 def object_meets_criteria(frame, properties, bbox, middle_line_coords):
     (x1, y1, x2, y2) = bbox
-    print('object_meets_criteria:', x1, y1, x2, y2)
     (p1, p2) = middle_line_coords
     properties_fulfilled = []
     from detect_colors import is_red, is_green, is_blue
