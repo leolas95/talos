@@ -2,13 +2,13 @@
 import argparse
 import time
 
+import cv2
 import imutils
+import numpy as np
 from imutils.video import FPS, VideoStream
 
-import cv2
-import numpy as np
 import actions.actions as actions
-
+import config_file_loader
 from handle_properties import handle_properties
 from pyimagesearch.centroidtracker import CentroidTracker
 
@@ -16,6 +16,10 @@ from pyimagesearch.centroidtracker import CentroidTracker
 ap = argparse.ArgumentParser()
 ap.add_argument("-c", "--confidence", type=float, default=0.2,
                 help="minimum probability to filter weak detections")
+
+ap.add_argument("-f", "--file", type=str, default="config.json",
+                help="Name of the configuration file. Defaults to 'config.json' \
+                in the directory where the main script is located")
 args = vars(ap.parse_args())
 
 # initialize the list of class labels MobileNet SSD was trained to
@@ -31,51 +35,19 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
 
 def get_value(operand, counters):
+    if type(operand) == int:
+        return operand
     # If the operand is an identifier, gets its current value, or default to
     # zero if not present yet
-    if operand.isidentifier():
+    elif operand.isidentifier():
         # Returns the current value of the counter, or 0 if doesn' exist yet
         result = counters.get(operand)
         return 0 if result is None else len(result)
 
-    # Else, we assume that it's just an integer
-    else:
-        return int(operand)
-
 
 def main():
-    program_data = {
-        'targets': {
-            'chair': {
-                'min': 5,
-                'max': 9,
-                'counter': 'chair_counter'
-            },
-            'person': {
-                'counter': 'person_counter'
-            }
-        },
-        'conditions': [
-            {
-                'condition': {
-                    'left_operand': 'chair_counter',
-                    'operator': '>',
-                    'right_operand': '2'
-                },
-                'action': 'alert',
-                'action_args': ['1', '2']
-            },
-            {
-                'condition': {
-                    'left_operand': 'person_counter',
-                    'operator': '>=',
-                    'right_operand': '1'
-                },
-                'action': 'alert',
-                'action_args': ['Se ha detectado a una persona!']
-            }
-        ]
-    }
+
+    program_data = config_file_loader.load(args['file'])
 
     targets = program_data['targets'].keys()
 
@@ -208,7 +180,7 @@ def main():
                     right_operand: right_operand_value
                 }
 
-                expression = left_operand + operator + right_operand
+                expression = f"{left_operand} {operator} {right_operand}"
                 expression_value = eval(expression, context)
 
                 if expression_value is True:
