@@ -1,6 +1,7 @@
 import pathlib
 
 def load(filename):
+    # Get extension without the leading dot
     extension = pathlib.Path(filename).suffix[1:]
 
     if extension == 'json':
@@ -8,14 +9,15 @@ def load(filename):
         with open(filename, 'r') as file:
             result = json.load(file)
 
-    elif extension == 'yaml' or extension == 'yml':
+    elif extension in ('yaml', 'yml'):
         import yaml
         with open(filename, 'r') as file:
             result = yaml.load(file, Loader=yaml.Loader)
 
     else:
         import xmltodict
-        # Use json to transform the OrderedDict to a normal dict, not a difference but ok...
+        # Use json to transform the OrderedDict returned from xmltodict.parse to a normal dict,
+        # not a difference but ok...
         import json
         with open(filename, 'r') as file:
             result = xmltodict.parse(file.read())
@@ -23,5 +25,5 @@ def load(filename):
             result = json.loads(json.dumps(result))
             if result['conditions'] is None:
                 result['conditions'] = []
-   
+
     return result
