@@ -56,7 +56,7 @@ def main():
     # are the IDs of the objects detected
     counters = {}
 
-    conditions = program_data['conditions']
+    targets_conditions = program_data['targets_conditions']
 
     # load our serialized model from disk
     print("[INFO] loading model...")
@@ -164,7 +164,7 @@ def main():
             remaining_conditions = []
 
             # Check if some condition holds true
-            for condition in conditions:
+            for condition in targets_conditions:
                 # Get value of left operand
                 left_operand = condition['condition']['left_operand']
                 left_operand_value = get_value(left_operand, counters)
@@ -186,14 +186,14 @@ def main():
                 if expression_value is True:
                     # Execute action
                     action = condition['action']
-                    action_args = condition['action_args']
+                    action_args = condition['action_arguments']
                     actions.do(action, *action_args)
                 else:
                     # If the current condition is False, we keep it
                     remaining_conditions.append(condition)
 
             # Update the list to the conditions that haven't been met
-            conditions = remaining_conditions
+            targets_conditions = remaining_conditions
 
             # Specified both minimum and maximum amount of objects
             if minimum is not None and maximum is not None:

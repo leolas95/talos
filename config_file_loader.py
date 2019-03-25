@@ -23,7 +23,10 @@ def load(filename):
             result = xmltodict.parse(file.read())
             result = dict(result['root'])
             result = json.loads(json.dumps(result))
-            if result['conditions'] is None:
-                result['conditions'] = []
+            if result['targets_conditions'] is None:
+                result['targets_conditions'] = []
+                
+            if result['activities_conditions'] is None:
+                result['targets_conditions'] = []
 
     return result
