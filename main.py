@@ -44,7 +44,6 @@ def get_value(operand, counters):
         result = counters.get(operand)
         return 0 if result is None else len(result)
 
-
 def main():
 
     program_data = config_file_loader.load(args['file'])
@@ -187,6 +186,10 @@ def main():
                     # Execute action
                     action = condition['action']
                     action_args = condition['action_arguments']
+                    # If the action requires the frame, append it to the arguments
+                    if action in actions.ACTIONS_THAT_REQUIRE_FRAME:
+                        action_args.append(frame)
+
                     actions.do(action, *action_args)
                 else:
                     # If the current condition is False, we keep it
