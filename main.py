@@ -13,14 +13,14 @@ from handle_properties import handle_properties
 from pyimagesearch.centroidtracker import CentroidTracker
 
 # construct the argument parse and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-c", "--confidence", type=float, default=0.2,
-                help="minimum probability to filter weak detections")
+argument_parser = argparse.ArgumentParser()
+argument_parser.add_argument("-c", "--confidence", type=float, default=0.2,
+                             help="minimum probability to filter weak detections")
 
-ap.add_argument("-f", "--file", type=str, default="config.json",
-                help="Name of the configuration file. Defaults to 'config.json' \
+argument_parser.add_argument("-f", "--file", type=str, default="config.json",
+                             help="Name of the configuration file. Defaults to 'config.json' \
                 in the directory where the main script is located")
-args = vars(ap.parse_args())
+args = vars(argument_parser.parse_args())
 
 # initialize the list of class labels MobileNet SSD was trained to
 # detect, then generate a set of bounding box colors for each class
@@ -35,7 +35,7 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
 
 def get_value(operand, counters):
-    if type(operand) == int:
+    if type(operand).__name__ == 'int':
         return operand
     # If the operand is an identifier, gets its current value, or default to
     # zero if not present yet
@@ -43,6 +43,7 @@ def get_value(operand, counters):
         # Returns the current value of the counter, or 0 if doesn' exist yet
         result = counters.get(operand)
         return 0 if result is None else len(result)
+
 
 def main():
 
@@ -69,7 +70,7 @@ def main():
     time.sleep(2.0)
     fps = FPS().start()
 
-    ct = CentroidTracker()
+    centroid_tracker = CentroidTracker()
 
     # loop over the frames from the video stream
     while True:
@@ -128,7 +129,7 @@ def main():
                 rects.append(
                     [x1, y1, x2, y2, (p1, p2, label, labely, COLORS[idx], class_name)])
 
-        objects = ct.update(rects)
+        objects = centroid_tracker.update(rects)
 
         # For each detected object, draw its bounding box, info, centroid and ID
         # if it meets the specified conditions (if any)
