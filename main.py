@@ -1,6 +1,7 @@
 # import the necessary packages
 import argparse
 import time
+import re
 
 import cv2
 import imutils
@@ -30,23 +31,28 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "sofa", "train", "tvmonitor"]
 COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
+IDENTIFIER_PATTERN = '[a-zA-Z]([-a-zA-Z0-9])*'
+IDENTIFIER_COMPILED_PATTERN = re.compile(IDENTIFIER_PATTERN)
+
+def is_identifier(name):
+    return IDENTIFIER_COMPILED_PATTERN.fullmatch(name) is not None
+
+
 # Gets the value of the operand, searching in the dict counters.
 # The operand must be either an identifier (counter) or an integer
-
 
 def get_value(operand, counters):
     if type(operand).__name__ == 'int':
         return operand
     # If the operand is an identifier, gets its current value, or default to
     # zero if not present yet
-    elif operand.isidentifier():
+    elif is_identifier(operand):
         # Returns the current value of the counter, or 0 if doesn' exist yet
         result = counters.get(operand)
         return 0 if result is None else len(result)
 
 
 def main():
-
     program_data = config_file_loader.load(args['file'])
 
     targets = program_data['targets'].keys()
@@ -175,6 +181,7 @@ def main():
                 right_operand = condition['condition']['right_operand']
                 right_operand_value = get_value(right_operand, counters)
 
+                left_operand = left_operand.replace('-', '_')
                 context = {
                     left_operand: left_operand_value,
                     right_operand: right_operand_value
@@ -190,10 +197,9 @@ def main():
                     # If the action requires the frame, append it to the arguments
                     if action in actions.ACTIONS_THAT_REQUIRE_FRAME:
                         action_args.append(frame)
-
                     actions.do(action, *action_args)
                 else:
-                    # If the current condition is False, we keep it
+                    # If the current condition wasn't met we keep it for the next round
                     remaining_conditions.append(condition)
 
             # Update the list to the conditions that haven't been met
