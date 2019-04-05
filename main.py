@@ -62,7 +62,7 @@ def main():
     # are the IDs of the objects detected
     counters = {}
 
-    targets_conditions = program_data['targets_conditions']
+    targets_conditions = program_data.get('targets_conditions')
 
     # load our serialized model from disk
     print("[INFO] loading model...")
@@ -155,6 +155,46 @@ def main():
 
             class_counter[target_name] -= 1
 
+            # List to keep the conditions that weren't true
+            remaining_conditions = []
+
+            if targets_conditions is not None:
+            # Check if some condition holds true
+                for condition in targets_conditions:
+                    # Get value of left operand
+                    left_operand = condition['condition']['left_operand']
+                    left_operand_value = get_value(left_operand, counters)
+
+                    operator = condition['condition']['operator']
+
+                    # Get value of right operand
+                    right_operand = condition['condition']['right_operand']
+                    right_operand_value = get_value(right_operand, counters)
+
+                    left_operand = left_operand.replace('-', '_')
+                    context = {
+                        left_operand: left_operand_value,
+                        right_operand: right_operand_value
+                    }
+
+                    expression = f"{left_operand} {operator} {right_operand}"
+                    expression_value = eval(expression, context)
+
+                    if expression_value is True:
+                        # Execute action
+                        action = condition['action']
+                        action_args = condition['action_arguments']
+                        # If the action requires the frame, append it to the arguments
+                        if action in actions.ACTIONS_THAT_REQUIRE_FRAME:
+                            action_args.append(frame)
+                        actions.do(action, *action_args)
+                    else:
+                        # If the current condition wasn't met we keep it for the next round
+                        remaining_conditions.append(condition)
+
+                # Update the list to the conditions that haven't been met
+                targets_conditions = remaining_conditions
+
             object_data = {
                 'bounding_box': (x1, y1, x2, y2),
                 'middle_line_coords': (p1, p2),
@@ -165,45 +205,6 @@ def main():
                 'centroid': centroid,
                 'counter_name': counter_name,
             }
-
-            # List to keep the conditions that weren't true
-            remaining_conditions = []
-
-            # Check if some condition holds true
-            for condition in targets_conditions:
-                # Get value of left operand
-                left_operand = condition['condition']['left_operand']
-                left_operand_value = get_value(left_operand, counters)
-
-                operator = condition['condition']['operator']
-
-                # Get value of right operand
-                right_operand = condition['condition']['right_operand']
-                right_operand_value = get_value(right_operand, counters)
-
-                left_operand = left_operand.replace('-', '_')
-                context = {
-                    left_operand: left_operand_value,
-                    right_operand: right_operand_value
-                }
-
-                expression = f"{left_operand} {operator} {right_operand}"
-                expression_value = eval(expression, context)
-
-                if expression_value is True:
-                    # Execute action
-                    action = condition['action']
-                    action_args = condition['action_arguments']
-                    # If the action requires the frame, append it to the arguments
-                    if action in actions.ACTIONS_THAT_REQUIRE_FRAME:
-                        action_args.append(frame)
-                    actions.do(action, *action_args)
-                else:
-                    # If the current condition wasn't met we keep it for the next round
-                    remaining_conditions.append(condition)
-
-            # Update the list to the conditions that haven't been met
-            targets_conditions = remaining_conditions
 
             # Specified both minimum and maximum amount of objects
             if minimum is not None and maximum is not None:
