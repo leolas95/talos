@@ -6,6 +6,7 @@ import re
 import cv2
 import imutils
 import numpy as np
+from activity_detection import get_detected_activity
 from imutils.video import FPS, VideoStream
 
 import actions.actions as actions
@@ -63,6 +64,7 @@ def main():
     counters = {}
 
     targets_conditions = program_data.get('targets_conditions')
+    activities = program_data.get('activities')
 
     # load our serialized model from disk
     print("[INFO] loading model...")
@@ -78,12 +80,23 @@ def main():
 
     centroid_tracker = CentroidTracker()
 
+    frame1 = vs.read()
+    frame1 = imutils.resize(frame1, width=600)
+
+    frame2 = vs.read()
+    frame2 = imutils.resize(frame2, width=600)
+
     # loop over the frames from the video stream
     while True:
         # grab the frame from the threaded video stream and resize it
         # to have a maximum width of 400 pixels
         frame = vs.read()
         frame = imutils.resize(frame, width=600)
+
+        if activities is not None:
+            activity = get_detected_activity(frame1, frame2, frame)
+            if activity is not None:
+                cv2.putText(frame, activity.capitalize(), (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
         # grab the frame dimensions and convert it to a blob
         (h, w) = frame.shape[:2]
@@ -228,6 +241,7 @@ def main():
 
         # show the output frame
         cv2.imshow("Frame", frame)
+        cv2.moveWindow("Frame", 100, 100)
         key = cv2.waitKey(1) & 0xFF
 
         # if the `q` key was pressed, break from the loop

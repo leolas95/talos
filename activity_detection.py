@@ -1,8 +1,8 @@
 import numpy as np
 import cv2
 
-WALK_MIN = 21
-WALK_MAX = 30
+WALK_MIN = 19
+WALK_MAX = 27
 
 RUN_MIN = 27
 RUN_MAX = 38
@@ -28,6 +28,25 @@ def dist_map(frame1, frame2):
     return dist
 
 
+def get_detected_activity(frame1, frame2, frame3):
+    dist = dist_map(frame1, frame3)
+    frame1[:] = frame2
+    frame2[:] = frame3
+    # apply Gaussian smoothing
+    mod = cv2.GaussianBlur(dist, (9, 9), 5)
+
+    # calculate st dev test
+    std_dev = cv2.meanStdDev(mod)[1]
+
+    # cv2.putText(
+    #     frame3, f"Standard Deviation - {round(std_dev[0][0], 0)}", (70, 70),
+    #     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+    if is_walking(std_dev):
+        return 'walking'
+    elif is_running(std_dev):
+        return 'running'
+
 def main():
     cap = cv2.VideoCapture(0)
     frame1 = cap.read()[1]
@@ -36,27 +55,10 @@ def main():
     while True:
         frame3 = cap.read()[1]
 
-        dist = dist_map(frame1, frame3)
+        act = get_detected_activity(frame1, frame2, frame3)
+        print(act)
 
-        frame1 = frame2
-        frame2 = frame3
-
-        # apply Gaussian smoothing
-        mod = cv2.GaussianBlur(dist, (9, 9), 5)
-
-        # calculate st dev test
-        std_dev = cv2.meanStdDev(mod)[1]
-
-        cv2.putText(
-            frame2, f"Standard Deviation - {round(std_dev[0][0], 0)}", (70, 70),
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-
-        if is_walking(std_dev):
-            print('CAM')
-        elif is_running(std_dev):
-            print('CORR')
-
-        cv2.imshow('frame', frame2)
+        cv2.imshow('frame', frame3)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
