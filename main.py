@@ -1,16 +1,16 @@
 # import the necessary packages
 import argparse
-import time
 import re
-
+import time
 import cv2
-import imutils
 import numpy as np
-from activity_detection import get_detected_activity
+
+import imutils
 from imutils.video import FPS, VideoStream
 
 import actions.actions as actions
 import config_file_loader
+from activity_detection import get_detected_activity
 from handle_properties import handle_properties
 from pyimagesearch.centroidtracker import CentroidTracker
 
@@ -34,6 +34,7 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
 IDENTIFIER_PATTERN = '[a-zA-Z]([-a-zA-Z0-9])*'
 IDENTIFIER_COMPILED_PATTERN = re.compile(IDENTIFIER_PATTERN)
+
 
 def is_identifier(name):
     return IDENTIFIER_COMPILED_PATTERN.fullmatch(name) is not None
@@ -97,7 +98,8 @@ def main():
         if activities is not None:
             activity = get_detected_activity(frame1, frame2, frame)
             if activity is not None:
-                cv2.putText(frame, activity.capitalize(), (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+                cv2.putText(frame, activity.capitalize(), (30, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
                 conditions = activities_conditions[:]
                 for condition in conditions:
@@ -112,8 +114,6 @@ def main():
 
                     actions.do(action, *action_args)
                     activities_conditions.remove(condition)
-
-                    
 
         # grab the frame dimensions and convert it to a blob
         (h, w) = frame.shape[:2]
@@ -189,7 +189,7 @@ def main():
             remaining_conditions = []
 
             if targets_conditions is not None:
-            # Check if some condition holds true
+                # Check if some condition holds true
                 for condition in targets_conditions:
                     # Get value of left operand
                     left_operand = condition['condition']['left_operand']
