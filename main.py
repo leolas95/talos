@@ -65,6 +65,7 @@ def main():
 
     targets_conditions = program_data.get('targets_conditions')
     activities = program_data.get('activities')
+    activities_conditions = program_data.get('activities_conditions')
 
     # load our serialized model from disk
     print("[INFO] loading model...")
@@ -97,6 +98,22 @@ def main():
             activity = get_detected_activity(frame1, frame2, frame)
             if activity is not None:
                 cv2.putText(frame, activity.capitalize(), (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+
+                conditions = activities_conditions[:]
+                for condition in conditions:
+                    if activity != condition['activity']:
+                        continue
+
+                    action = condition['action']
+                    action_args = condition['action_arguments']
+
+                    if action in actions.ACTIONS_THAT_REQUIRE_FRAME:
+                        action_args.append(frame)
+
+                    actions.do(action, *action_args)
+                    activities_conditions.remove(condition)
+
+                    
 
         # grab the frame dimensions and convert it to a blob
         (h, w) = frame.shape[:2]
