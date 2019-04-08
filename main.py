@@ -1,18 +1,18 @@
-# import the necessary packages
 import argparse
-import re
+import datetime
 import time
-import cv2
-import numpy as np
 
+import cv2
 import imutils
+import numpy as np
 from imutils.video import FPS, VideoStream
 
-import actions.actions as actions
 import config_file_loader
 from activity_detection import get_detected_activity
+from activity_handler import handle_activity
 from handle_properties import handle_properties
-from pyimagesearch.centroidtracker import CentroidTracker
+from centroidtracker import CentroidTracker
+from targets_conditions_handler import handle_targets_conditions
 
 # construct the argument parse and parse the arguments
 argument_parser = argparse.ArgumentParser()
@@ -32,27 +32,21 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "sofa", "train", "tvmonitor"]
 COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
-IDENTIFIER_PATTERN = '[a-zA-Z]([-a-zA-Z0-9])*'
-IDENTIFIER_COMPILED_PATTERN = re.compile(IDENTIFIER_PATTERN)
+CURRENT_DATE_FORMAT_STRING = "%A %d %B %Y %I:%M:%S %p"
+CURRENT_DATE = datetime.datetime.now().strftime(CURRENT_DATE_FORMAT_STRING)
 
 
-def is_identifier(name):
-    return IDENTIFIER_COMPILED_PATTERN.fullmatch(name) is not None
+def check_activities(activities, activities_conditions, frame1, frame2, frame):
+    if activities is not None:
+        activity = get_detected_activity(frame1, frame2, frame)
+        if activity is not None:
+            handle_activity(activity, activities_conditions, frame)
 
 
-# Gets the value of the operand, searching in the dict counters.
-# The operand must be either an identifier (counter) or an integer
-
-def get_value(operand, counters):
-    if type(operand).__name__ == 'int':
-        return operand
-    # If the operand is an identifier, gets its current value, or default to
-    # zero if not present yet
-    elif is_identifier(operand):
-        # Returns the current value of the counter, or 0 if doesn' exist yet
-        result = counters.get(operand)
-        return 0 if result is None else len(result)
-
+def check_targets_conditions(targets_conditions, counters, frame):
+    if targets_conditions is not None:
+        # Check if some condition holds true
+        handle_targets_conditions(targets_conditions, counters, frame)
 
 def main():
     program_data = config_file_loader.load(args['file'])
@@ -76,44 +70,28 @@ def main():
     # initialize the video stream, allow the cammera sensor to warmup,
     # and initialize the FPS counter
     print("[INFO] starting video stream...")
-    vs = VideoStream(src=0).start()
+    video_source = VideoStream(src=0).start()
     time.sleep(2.0)
     fps = FPS().start()
 
     centroid_tracker = CentroidTracker()
 
-    frame1 = vs.read()
+    frame1 = video_source.read()
     frame1 = imutils.resize(frame1, width=600)
 
-    frame2 = vs.read()
+    frame2 = video_source.read()
     frame2 = imutils.resize(frame2, width=600)
 
     # loop over the frames from the video stream
     while True:
         # grab the frame from the threaded video stream and resize it
         # to have a maximum width of 400 pixels
-        frame = vs.read()
+        frame = video_source.read()
         frame = imutils.resize(frame, width=600)
 
-        if activities is not None:
-            activity = get_detected_activity(frame1, frame2, frame)
-            if activity is not None:
-                cv2.putText(frame, activity.capitalize(), (30, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
-
-                conditions = activities_conditions[:]
-                for condition in conditions:
-                    if activity != condition['activity']:
-                        continue
-
-                    action = condition['action']
-                    action_args = condition['action_arguments']
-
-                    if action in actions.ACTIONS_THAT_REQUIRE_FRAME:
-                        action_args.append(frame)
-
-                    actions.do(action, *action_args)
-                    activities_conditions.remove(condition)
+        # Check if there are activities to look for
+        check_activities(activities, activities_conditions,
+                         frame1, frame2, frame)
 
         # grab the frame dimensions and convert it to a blob
         (h, w) = frame.shape[:2]
@@ -185,45 +163,7 @@ def main():
 
             class_counter[target_name] -= 1
 
-            # List to keep the conditions that weren't true
-            remaining_conditions = []
-
-            if targets_conditions is not None:
-                # Check if some condition holds true
-                for condition in targets_conditions:
-                    # Get value of left operand
-                    left_operand = condition['condition']['left_operand']
-                    left_operand_value = get_value(left_operand, counters)
-
-                    operator = condition['condition']['operator']
-
-                    # Get value of right operand
-                    right_operand = condition['condition']['right_operand']
-                    right_operand_value = get_value(right_operand, counters)
-
-                    left_operand = left_operand.replace('-', '_')
-                    context = {
-                        left_operand: left_operand_value,
-                        right_operand: right_operand_value
-                    }
-
-                    expression = f"{left_operand} {operator} {right_operand}"
-                    expression_value = eval(expression, context)
-
-                    if expression_value is True:
-                        # Execute action
-                        action = condition['action']
-                        action_args = condition['action_arguments']
-                        # If the action requires the frame, append it to the arguments
-                        if action in actions.ACTIONS_THAT_REQUIRE_FRAME:
-                            action_args.append(frame)
-                        actions.do(action, *action_args)
-                    else:
-                        # If the current condition wasn't met we keep it for the next round
-                        remaining_conditions.append(condition)
-
-                # Update the list to the conditions that haven't been met
-                targets_conditions = remaining_conditions
+            check_targets_conditions(targets_conditions, counters, frame)
 
             object_data = {
                 'bounding_box': (x1, y1, x2, y2),
@@ -256,7 +196,9 @@ def main():
                 # So just check properties onwards
                 handle_properties(frame, properties, counters, object_data)
 
-        # show the output frame
+        # show the current date on the bottom right corner
+        cv2.putText(frame, CURRENT_DATE,
+                    (frame.shape[1]-330, frame.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
         cv2.imshow("Frame", frame)
         cv2.moveWindow("Frame", 100, 100)
         key = cv2.waitKey(1) & 0xFF
@@ -275,7 +217,7 @@ def main():
 
     # do a bit of cleanup
     cv2.destroyAllWindows()
-    vs.stop()
+    video_source.stop()
     print(counters)
 
 
