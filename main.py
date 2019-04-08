@@ -48,6 +48,7 @@ def check_targets_conditions(targets_conditions, counters, frame):
         # Check if some condition holds true
         handle_targets_conditions(targets_conditions, counters, frame)
 
+
 def main():
     program_data = config_file_loader.load(args['file'])
 
@@ -198,7 +199,8 @@ def main():
 
         # show the current date on the bottom right corner
         cv2.putText(frame, CURRENT_DATE,
-                    (frame.shape[1]-330, frame.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
+                    (frame.shape[1]-330, frame.shape[0]-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
         cv2.imshow("Frame", frame)
         cv2.moveWindow("Frame", 100, 100)
         key = cv2.waitKey(1) & 0xFF
