@@ -119,18 +119,21 @@ def main():
                 check_activity_conditions(
                     activity, activities_conditions, frame)
 
-        # grab the frame dimensions and convert it to a blob
-        (h, w) = frame.shape[:2]
-        blob = cv2.dnn.blobFromImage(cv2.resize(
-            frame, (300, 300)), 0.007843, (300, 300), 127.5)
-
         if targets is None:
             current_date = datetime.datetime.now().strftime(CURRENT_DATE_FORMAT_STRING)
             cv2.putText(frame, current_date,
                         (frame.shape[1]-345, frame.shape[0]-10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
             cv2.imshow("Frame", frame)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):
+                break
             continue
+
+        # grab the frame dimensions and convert it to a blob
+        (h, w) = frame.shape[:2]
+        blob = cv2.dnn.blobFromImage(cv2.resize(
+            frame, (300, 300)), 0.007843, (300, 300), 127.5)
 
         # pass the blob through the network and obtain the detections and
         # predictions

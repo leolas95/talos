@@ -1,8 +1,8 @@
 import numpy as np
 import cv2
 
-WALK_MIN = 22
-WALK_MAX = 33
+WALK_MIN = 8
+WALK_MAX = 28
 
 RUN_MIN = 35
 RUN_MAX = 45
