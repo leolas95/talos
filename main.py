@@ -30,10 +30,28 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
            "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
            "sofa", "train", "tvmonitor"]
-COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
+#COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
+
+COLORS = [
+    (100, 120, 100),
+    (90, 178, 30),
+    (11, 33, 57),
+    (23, 42, 13),
+    (12, 99, 44),
+    (55, 98, 90),
+    (100, 100, 200),
+    (140, 175, 80), # car
+    (150, 100, 140),
+    (160, 180, 200),
+    (100, 90, 134),
+    (96, 78, 45),
+    (34, 90, 121),
+    (200, 145, 40),
+    (124, 55, 90),
+    (223.39221401, 113.79734267, 17.9394392), # person
+]
 
 CURRENT_DATE_FORMAT_STRING = "%A %d %B %Y %I:%M:%S %p"
-CURRENT_DATE = datetime.datetime.now().strftime(CURRENT_DATE_FORMAT_STRING)
 
 
 def check_activities(activities, activities_conditions, frame1, frame2, frame):
@@ -52,7 +70,9 @@ def check_targets_conditions(targets_conditions, counters, frame):
 def main():
     program_data = config_file_loader.load(args['file'])
 
-    targets = program_data['targets'].keys()
+    targets = program_data.get('targets')
+    if targets is not None:
+        targets = targets.keys()
 
     # Dictionary of counter names specified by the user in the DSL program.
     # Each key is the name of the counter, and the value is a set, whose elements
@@ -83,6 +103,9 @@ def main():
     frame2 = video_source.read()
     frame2 = imutils.resize(frame2, width=600)
 
+    cv2.namedWindow("Frame")
+    cv2.moveWindow("Frame", 380, 150)
+
     # loop over the frames from the video stream
     while True:
         # grab the frame from the threaded video stream and resize it
@@ -98,6 +121,14 @@ def main():
         (h, w) = frame.shape[:2]
         blob = cv2.dnn.blobFromImage(cv2.resize(
             frame, (300, 300)), 0.007843, (300, 300), 127.5)
+
+        if targets is None:
+            current_date = datetime.datetime.now().strftime(CURRENT_DATE_FORMAT_STRING)
+            cv2.putText(frame, current_date,
+                        (frame.shape[1]-345, frame.shape[0]-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
+            cv2.imshow("Frame", frame)
+            continue
 
         # pass the blob through the network and obtain the detections and
         # predictions
@@ -198,11 +229,11 @@ def main():
                 handle_properties(frame, properties, counters, object_data)
 
         # show the current date on the bottom right corner
-        cv2.putText(frame, CURRENT_DATE,
-                    (frame.shape[1]-330, frame.shape[0]-10),
+        current_date = datetime.datetime.now().strftime(CURRENT_DATE_FORMAT_STRING)
+        cv2.putText(frame, current_date,
+                    (frame.shape[1]-345, frame.shape[0]-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 2)
         cv2.imshow("Frame", frame)
-        cv2.moveWindow("Frame", 100, 100)
         key = cv2.waitKey(1) & 0xFF
 
         # if the `q` key was pressed, break from the loop
