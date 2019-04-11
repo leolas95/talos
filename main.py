@@ -40,7 +40,7 @@ COLORS = [
     (12, 99, 44),
     (55, 98, 90),
     (100, 100, 200),
-    (140, 175, 80), # car
+    (140, 175, 80),  # car
     (150, 100, 140),
     (160, 180, 200),
     (100, 90, 134),
@@ -48,16 +48,19 @@ COLORS = [
     (34, 90, 121),
     (200, 145, 40),
     (124, 55, 90),
-    (223.39221401, 113.79734267, 17.9394392), # person
+    (223.39221401, 113.79734267, 17.9394392),  # person
 ]
 
 CURRENT_DATE_FORMAT_STRING = "%A %d %B %Y %I:%M:%S %p"
 
 
 def check_activities(activities, activities_conditions, frame1, frame2, frame):
+    """
+        Checks if some wanted activity has been detected
+    """
     if activities is not None:
         activity = get_detected_activity(frame1, frame2, frame)
-        if activity is not None:
+        if activity is not None and activity in activities:
             handle_activity(activity, activities_conditions, frame)
 
 
@@ -80,7 +83,11 @@ def main():
     counters = {}
 
     targets_conditions = program_data.get('targets_conditions')
+
     activities = program_data.get('activities')
+    if activities is not None:
+        activities = activities.keys()
+
     activities_conditions = program_data.get('activities_conditions')
 
     # load our serialized model from disk

@@ -1,11 +1,11 @@
 import numpy as np
 import cv2
 
-WALK_MIN = 19
-WALK_MAX = 27
+WALK_MIN = 22
+WALK_MAX = 33
 
-RUN_MIN = 27
-RUN_MAX = 38
+RUN_MIN = 35
+RUN_MAX = 45
 
 
 def is_walking(x):
@@ -46,6 +46,8 @@ def get_detected_activity(frame1, frame2, frame3):
         return 'walking'
     elif is_running(std_dev):
         return 'running'
+    else:
+        return None
 
 def main():
     cap = cv2.VideoCapture(0)
