@@ -28,7 +28,7 @@ def dist_map(frame1, frame2):
     return dist
 
 
-def get_detected_activity(frame1, frame2, frame3):
+def detect_activity(frame1, frame2, frame3):
     dist = dist_map(frame1, frame3)
     frame1[:] = frame2
     frame2[:] = frame3
@@ -57,7 +57,7 @@ def main():
     while True:
         frame3 = cap.read()[1]
 
-        act = get_detected_activity(frame1, frame2, frame3)
+        act = detect_activity(frame1, frame2, frame3)
         print(act)
 
         cv2.imshow('frame', frame3)

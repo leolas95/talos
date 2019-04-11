@@ -66,7 +66,7 @@ def handle_counter(counters, counter_name, object_id):
     counters[counter_name].add(object_id)
 
 
-def handle_properties(frame, properties, counters, object_data):
+def check_target_properties(frame, properties, counters, object_data):
     object_id = object_data['object_id']
     counter_name = object_data['counter_name']
 

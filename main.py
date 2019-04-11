@@ -8,11 +8,13 @@ import numpy as np
 from imutils.video import FPS, VideoStream
 
 import config_file_loader
-from activity_detection import get_detected_activity
-from activity_handler import handle_activity
-from handle_properties import handle_properties
-from centroidtracker import CentroidTracker
-from targets_conditions_handler import handle_targets_conditions
+
+from activities.detection.detect_activity import detect_activity
+from activities.conditions.check import check_activity_conditions
+
+from targets.properties.check import check_target_properties
+from targets.tracker.centroidtracker import CentroidTracker
+from targets.conditions.check import check_targets_conditions
 
 # construct the argument parse and parse the arguments
 argument_parser = argparse.ArgumentParser()
@@ -52,23 +54,6 @@ COLORS = [
 ]
 
 CURRENT_DATE_FORMAT_STRING = "%A %d %B %Y %I:%M:%S %p"
-
-
-def check_activities(activities, activities_conditions, frame1, frame2, frame):
-    """
-        Checks if some wanted activity has been detected
-    """
-    if activities is not None:
-        activity = get_detected_activity(frame1, frame2, frame)
-        if activity is not None and activity in activities:
-            handle_activity(activity, activities_conditions, frame)
-
-
-def check_targets_conditions(targets_conditions, counters, frame):
-    if targets_conditions is not None:
-        # Check if some condition holds true
-        handle_targets_conditions(targets_conditions, counters, frame)
-
 
 def main():
     program_data = config_file_loader.load(args['file'])
@@ -121,8 +106,10 @@ def main():
         frame = imutils.resize(frame, width=600)
 
         # Check if there are activities to look for
-        check_activities(activities, activities_conditions,
-                         frame1, frame2, frame)
+        if activities is not None:
+            activity = detect_activity(frame1, frame2, frame)
+            if activity is not None and activity in activities:
+                check_activity_conditions(activity, activities_conditions, frame)
 
         # grab the frame dimensions and convert it to a blob
         (h, w) = frame.shape[:2]
@@ -202,7 +189,9 @@ def main():
 
             class_counter[target_name] -= 1
 
-            check_targets_conditions(targets_conditions, counters, frame)
+            if targets_conditions is not None:
+                # Check if some condition holds true
+                check_targets_conditions(targets_conditions, counters, frame)
 
             object_data = {
                 'bounding_box': (x1, y1, x2, y2),
@@ -218,22 +207,26 @@ def main():
             # Specified both minimum and maximum amount of objects
             if minimum is not None and maximum is not None:
                 if minimum <= detected_objects <= maximum:
-                    handle_properties(frame, properties, counters, object_data)
+                    check_target_properties(
+                        frame, properties, counters, object_data)
 
             # Just minimum
             elif minimum is not None and maximum is None:
                 if detected_objects >= minimum:
-                    handle_properties(frame, properties, counters, object_data)
+                    check_target_properties(
+                        frame, properties, counters, object_data)
 
             # Just maximum
             elif minimum is None and maximum is not None:
                 if detected_objects <= maximum:
-                    handle_properties(frame, properties, counters, object_data)
+                    check_target_properties(
+                        frame, properties, counters, object_data)
 
             # Neither minimum nor maximum
             else:
                 # So just check properties onwards
-                handle_properties(frame, properties, counters, object_data)
+                check_target_properties(
+                    frame, properties, counters, object_data)
 
         # show the current date on the bottom right corner
         current_date = datetime.datetime.now().strftime(CURRENT_DATE_FORMAT_STRING)

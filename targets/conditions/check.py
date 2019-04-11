@@ -1,7 +1,7 @@
 from utils import get_value
 import actions.actions as actions
 
-def handle_targets_conditions(targets_conditions, counters, frame):
+def check_targets_conditions(targets_conditions, counters, frame):
     # List to keep the conditions that weren't true
     remaining_conditions = []
     for condition in targets_conditions:
