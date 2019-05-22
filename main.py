@@ -9,12 +9,12 @@ from imutils.video import FPS, VideoStream
 
 import config_file_loader
 
-from activities.detection.detect_activity import detect_activity
-from activities.conditions.check import check_activity_conditions
+from activities.detect_activity import detect_activity
+from activities.check_activity import check_activity_conditions
 
-from targets.properties.check import check_target_properties
-from targets.tracker.centroidtracker import CentroidTracker
-from targets.conditions.check import check_targets_conditions
+from targets.check_properties import check_target_properties
+from targets.centroidtracker import CentroidTracker
+from targets.check_conditions import check_targets_conditions
 
 # construct the argument parse and parse the arguments
 ARGUMENT_PARSER = argparse.ArgumentParser()

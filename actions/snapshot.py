@@ -1,7 +1,7 @@
 import time
 import cv2
 
-__FORMAT_STRING = '%d-%m-%Y--%I:%M:%S%p'
+__FORMAT_STRING = '%d-%m-%Y--%I-%M-%S%p'
 
 
 def snapshot(filename, extension='png', *frame):
